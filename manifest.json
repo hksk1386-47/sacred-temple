@@ -1,0 +1,86 @@
+{
+  "id": "/sacred-temple/",
+  "name": "Sacred Temple",
+  "short_name": "Sacred Temple",
+  "description": "A place to share what the soul is saying — templo pessoal, posts, músicas e Eternal Station. Grátis · PWA v13.15",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "background_color": "#1a0f2e",
+  "theme_color": "#2E1A47",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icons/spirit.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/spirit-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/spirit-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/spirit-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/spirit-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["music", "social", "lifestyle"],
+  "lang": "pt",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "Meu templo",
+      "short_name": "Templo",
+      "description": "Abrir o próprio Templo Sagrado",
+      "url": "./index.html?go=home",
+      "icons": [{ "src": "icons/spirit-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Novo post",
+      "short_name": "Postar",
+      "description": "Criar um post no templo",
+      "url": "./index.html?go=compose",
+      "icons": [{ "src": "icons/spirit-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Eternal Station",
+      "short_name": "Station",
+      "description": "Abrir a Eternal Station",
+      "url": "./index.html?go=eternal",
+      "icons": [{ "src": "icons/spirit-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "share_target": {
+    "action": "./index.html",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "share_title",
+      "text": "share_text",
+      "url": "share_url"
+    }
+  },
+  "handle_links": "preferred",
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  }
+}
