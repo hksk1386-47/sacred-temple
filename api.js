@@ -3,12 +3,15 @@
   "use strict";
 
   const KEY = "st_api_base";
+  // URL padrão: qualquer aparelho já usa esta API sem configurar manualmente
+  const DEFAULT_API_BASE = "https://sacred-temple-api.hksk1386.workers.dev";
 
   function getBase() {
     try {
-      return (localStorage.getItem(KEY) || "").replace(/\/+$/, "");
+      const stored = (localStorage.getItem(KEY) || "").replace(/\/+$/, "");
+      return stored || DEFAULT_API_BASE;
     } catch {
-      return "";
+      return DEFAULT_API_BASE;
     }
   }
 
@@ -148,3 +151,4 @@
     listMusic,
   };
 })(typeof window !== "undefined" ? window : globalThis);
+        
