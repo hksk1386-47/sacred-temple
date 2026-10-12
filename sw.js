@@ -1,5 +1,5 @@
-/* Sacred Temple — Service Worker (offline + notifications) v13.15.4 */
-const CACHE = "sacred-temple-v13.15.4";
+/* Sacred Temple — Service Worker (offline + notifications) v13.15.6 */
+const CACHE = "sacred-temple-v13.15.6";
 const ASSETS = [
   "./",
   "./index.html",
@@ -61,10 +61,29 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(req.url);
 
-  if (url.pathname.startsWith("/api/") || url.hostname.includes("workers.dev")) {
+  // API e mídia remota: sempre rede (não cachear áudio/vídeo grande)
+  if (
+    url.pathname.startsWith("/api/") ||
+    url.hostname.includes("workers.dev") ||
+    url.pathname.includes("/api/media/")
+  ) {
+    event.respondWith(
+      fetch(req).catch(() => caches.match(req))
+    );
+    return;
+  }
+
+  // Scripts do app: rede primeiro — atualiza sem clicar em Atualizar
+  if (/\/js\/(api|app)\.js$/.test(url.pathname)) {
     event.respondWith(
       fetch(req)
-        .then((response) => response)
+        .then((res) => {
+          if (res && res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((cache) => cache.put(req, copy)).catch(() => {});
+          }
+          return res;
+        })
         .catch(() => caches.match(req))
     );
     return;
@@ -103,3 +122,4 @@ self.addEventListener("fetch", (event) => {
     })
   );
 });
+      
