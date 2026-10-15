@@ -1,5 +1,5 @@
-/* Sacred Temple — Service Worker (offline + notifications) v13.16.0 */
-const CACHE = "sacred-temple-v13.16.0";
+/* Sacred Temple — Service Worker (offline + notifications) v13.16.1 */
+const CACHE = "sacred-temple-v13.16.1";
 const ASSETS = [
   "./",
   "./index.html",
@@ -52,7 +52,63 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("message", (event) => {
-  if (event.data && event.data.type === "SKIP_WAITING") self.skipWaiting();
+  const data = event.data || {};
+  if (data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+    return;
+  }
+  if (data.type === "SHOW_NOTIFICATION") {
+    const title = data.title || "Sacred Temple";
+    const options = {
+      body: data.body || "",
+      icon: data.icon || "./icons/spirit-192.png",
+      badge: "./icons/spirit-192.png",
+      tag: data.tag || "sacred-temple",
+      renotify: true,
+      data: { url: data.url || "./" },
+    };
+    event.waitUntil(self.registration.showNotification(title, options));
+  }
+});
+
+self.addEventListener("push", (event) => {
+  let title = "Sacred Temple";
+  let body = "Nova atividade no templo";
+  let url = "./";
+  try {
+    if (event.data) {
+      const j = event.data.json();
+      if (j.title) title = j.title;
+      if (j.body) body = j.body;
+      if (j.url) url = j.url;
+    }
+  } catch (_) {}
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      icon: "./icons/spirit-192.png",
+      badge: "./icons/spirit-192.png",
+      tag: "sacred-push",
+      renotify: true,
+      data: { url },
+    })
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = (event.notification.data && event.notification.data.url) || "./";
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      for (const client of list) {
+        if ("focus" in client) {
+          try { client.navigate(target); } catch (_) {}
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) return clients.openWindow(target);
+    })
+  );
 });
 
 self.addEventListener("fetch", (event) => {
@@ -122,4 +178,4 @@ self.addEventListener("fetch", (event) => {
     })
   );
 });
-              
+  
