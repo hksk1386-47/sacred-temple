@@ -135,6 +135,31 @@
     return request("/api/music?author=" + encodeURIComponent(author || ""));
   }
 
+  async function getVapidPublicKey() {
+    return request("/api/push/vapid-public-key");
+  }
+
+  async function pushSubscribe(sub) {
+    return request("/api/push/subscribe", {
+      method: "POST",
+      body: JSON.stringify(sub),
+    });
+  }
+
+  async function pushUnsubscribe(endpoint) {
+    return request("/api/push/subscribe", {
+      method: "DELETE",
+      body: JSON.stringify({ endpoint }),
+    });
+  }
+
+  async function pushTest(profileId) {
+    return request("/api/push/test", {
+      method: "POST",
+      body: JSON.stringify({ profile_id: profileId }),
+    });
+  }
+
   global.SacredAPI = {
     getBase,
     setBase,
@@ -149,6 +174,10 @@
     deixarApoiar,
     uploadMedia,
     listMusic,
+    getVapidPublicKey,
+    pushSubscribe,
+    pushUnsubscribe,
+    pushTest,
   };
 })(typeof window !== "undefined" ? window : globalThis);
   
