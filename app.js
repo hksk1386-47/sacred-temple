@@ -2,8 +2,8 @@
 (function () {
   "use strict";
 
-  const APP_VERSION = "13.15.4";
-  const APP_BUILD = "2026-10-12-sync";
+  const APP_VERSION = "13.16.0";
+  const APP_BUILD = "2026-10-15-temple-theme";
 
   // ---------- Config ----------
   // Client ID do Google Cloud Console (OAuth 2.0 → Aplicativo da Web).
@@ -148,8 +148,179 @@
     name: "",
     bio: "",
     avatarColor: "#e8e0ff",
+    templeTheme: "classic",
     photo: null,
   };
+
+  /** Temas do templo — vários claros + clássico escuro */
+  const TEMPLE_THEMES = {
+    classic: {
+      label: "Clássico",
+      light: false,
+      vars: {
+        "--purple-deep": "#2E1A47",
+        "--purple-mid": "#4A2C6A",
+        "--purple-soft": "#6B4C8A",
+        "--purple-bg": "#1a0f2e",
+        "--gold": "#C9A227",
+        "--gold-light": "#E8C84A",
+        "--gold-dim": "#8B6914",
+        "--white": "#F8F4FF",
+        "--white-dim": "#D4C8E8",
+        "--glass": "rgba(255,255,255,0.08)",
+        "--glass-border": "rgba(255,255,255,0.12)",
+      },
+      themeColor: "#C9A227",
+    },
+    pearl: {
+      label: "Pérola",
+      light: true,
+      vars: {
+        "--purple-deep": "#4A3A6A",
+        "--purple-mid": "#7B6A9A",
+        "--purple-soft": "#A898C8",
+        "--purple-bg": "#F7F3FF",
+        "--gold": "#B8922A",
+        "--gold-light": "#D4B24A",
+        "--gold-dim": "#8A6A18",
+        "--white": "#2A1F3D",
+        "--white-dim": "#5A4E70",
+        "--glass": "rgba(255,255,255,0.65)",
+        "--glass-border": "rgba(80,60,120,0.12)",
+      },
+      themeColor: "#B8922A",
+    },
+    sunrise: {
+      label: "Aurora",
+      light: true,
+      vars: {
+        "--purple-deep": "#6B4A20",
+        "--purple-mid": "#C9A227",
+        "--purple-soft": "#E8C84A",
+        "--purple-bg": "#FFF6E8",
+        "--gold": "#C47A1A",
+        "--gold-light": "#E09A3A",
+        "--gold-dim": "#9A5A10",
+        "--white": "#3A2A18",
+        "--white-dim": "#6A5640",
+        "--glass": "rgba(255,255,255,0.7)",
+        "--glass-border": "rgba(160,100,40,0.14)",
+      },
+      themeColor: "#C47A1A",
+    },
+    sky: {
+      label: "Céu",
+      light: true,
+      vars: {
+        "--purple-deep": "#2A4A6A",
+        "--purple-mid": "#5A8AB0",
+        "--purple-soft": "#8AB8D8",
+        "--purple-bg": "#EAF4FF",
+        "--gold": "#3A7AB0",
+        "--gold-light": "#5A9AD0",
+        "--gold-dim": "#2A5A88",
+        "--white": "#1A2A3A",
+        "--white-dim": "#4A5A6A",
+        "--glass": "rgba(255,255,255,0.72)",
+        "--glass-border": "rgba(40,90,140,0.12)",
+      },
+      themeColor: "#3A7AB0",
+    },
+    mint: {
+      label: "Menta",
+      light: true,
+      vars: {
+        "--purple-deep": "#1A5A48",
+        "--purple-mid": "#3A9A78",
+        "--purple-soft": "#6AC8A8",
+        "--purple-bg": "#E8F8F2",
+        "--gold": "#2A8A68",
+        "--gold-light": "#4ABA90",
+        "--gold-dim": "#1A6A4A",
+        "--white": "#14382C",
+        "--white-dim": "#3A5A4C",
+        "--glass": "rgba(255,255,255,0.72)",
+        "--glass-border": "rgba(30,100,80,0.12)",
+      },
+      themeColor: "#2A8A68",
+    },
+    rose: {
+      label: "Rosa",
+      light: true,
+      vars: {
+        "--purple-deep": "#6A3048",
+        "--purple-mid": "#C07090",
+        "--purple-soft": "#E0A0B8",
+        "--purple-bg": "#FFF0F3",
+        "--gold": "#C05070",
+        "--gold-light": "#E07090",
+        "--gold-dim": "#903050",
+        "--white": "#3A1828",
+        "--white-dim": "#6A4050",
+        "--glass": "rgba(255,255,255,0.72)",
+        "--glass-border": "rgba(140,60,90,0.12)",
+      },
+      themeColor: "#C05070",
+    },
+    lavender: {
+      label: "Lavanda",
+      light: true,
+      vars: {
+        "--purple-deep": "#4A3A7A",
+        "--purple-mid": "#8A7AB8",
+        "--purple-soft": "#B8A8E0",
+        "--purple-bg": "#F3EEFF",
+        "--gold": "#7A5AC0",
+        "--gold-light": "#9A7AD8",
+        "--gold-dim": "#5A3A98",
+        "--white": "#2A2040",
+        "--white-dim": "#5A4A70",
+        "--glass": "rgba(255,255,255,0.7)",
+        "--glass-border": "rgba(90,70,140,0.12)",
+      },
+      themeColor: "#7A5AC0",
+    },
+    sand: {
+      label: "Areia",
+      light: true,
+      vars: {
+        "--purple-deep": "#5A4830",
+        "--purple-mid": "#A89060",
+        "--purple-soft": "#D0C090",
+        "--purple-bg": "#FBF6EC",
+        "--gold": "#A07830",
+        "--gold-light": "#C09850",
+        "--gold-dim": "#785820",
+        "--white": "#2E2618",
+        "--white-dim": "#5A5040",
+        "--glass": "rgba(255,255,255,0.7)",
+        "--glass-border": "rgba(120,90,40,0.12)",
+      },
+      themeColor: "#A07830",
+    },
+  };
+
+  function applyTempleTheme(themeId, opts) {
+    opts = opts || {};
+    const id = (themeId && TEMPLE_THEMES[themeId]) ? themeId : "classic";
+    const theme = TEMPLE_THEMES[id];
+    const root = document.documentElement;
+    Object.keys(theme.vars).forEach((k) => {
+      root.style.setProperty(k, theme.vars[k]);
+    });
+    root.classList.toggle("temple-light", !!theme.light);
+    root.dataset.templeTheme = id;
+    // Barra do navegador / PWA
+    if (!opts.skipMeta) {
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute("content", theme.themeColor || theme.vars["--gold"]);
+      try {
+        const metas = document.querySelectorAll('meta[name="theme-color"]');
+        metas.forEach((m) => m.setAttribute("content", theme.themeColor || theme.vars["--gold"]));
+      } catch (_) {}
+    }
+    return id;
+  }
 
   const BAD_WORDS = { soft: ["spam"], medium: ["spam", "hate", "idiot"], strict: ["spam", "hate", "idiot", "stupid", "kill"] };
 
@@ -183,7 +354,11 @@
     privacy: load("privacy", { profile: "public", eternal: "public", lives: "public", comment: "everyone", quiet: "everyone", download: "allow" }),
     moderation: load("moderation", { level: "medium", words: "", action: "censor", spam: "on" }),
     downloads: load("downloads", { music: "yes", lives: "yes", viewers: "yes" }),
-    notifications: load("notifications", { posts: "on", eternal: "off", lives: "on", permissionAsked: false }),
+    notifications: (() => {
+      const n = load("notifications", { posts: "on", eternal: "off", lives: "on", temples: "on", permissionAsked: false });
+      if (n.temples == null) n.temples = "on";
+      return n;
+    })(),
     autoSync: load("autoSync", true), // sincronizar com API automaticamente após postar/importar
     quietRequests: load("quietRequests", []),
     apoio: load("apoio", { apoiadores: [], apoiando: [] }), // demo lists of { id, name }
@@ -191,8 +366,15 @@
     translations: load("translations", {}), // itemId -> { lang: translated }
     // Diretório local de perfis conhecidos neste dispositivo
     profilesDirectory: load("profilesDirectory", []), // [{ id, name, bio, handle, color, photo, source, updatedAt }]
+    // IDs de templos já vistos (para avisar quando surgir um novo)
+    knownTempleIds: load("knownTempleIds", []),
     draft: load("draft", null), // { text, link, savedAt }
-    a11y: load("a11y", { font: "normal", motion: "off", contrast: "off" }),
+    a11y: (() => {
+      const a = load("a11y", { font: "normal", motion: "off", contrast: "off", tts: "on", ttsRate: "1", ttsLang: null });
+      if (a.tts == null) a.tts = "on";
+      if (a.ttsRate == null) a.ttsRate = "1";
+      return a;
+    })(),
     streak: load("streak", { count: 0, lastDate: null }),
     libraryFilterPinned: false,
     libraryQuery: "",
@@ -208,148 +390,4 @@
     progress: 0,
     duration: 0,
     cameraStream: null,
-    isLive: false,
-    deferredPrompt: null,
-    selectedItem: null,
-    presence: 1,
-    eternalListeners: 1,
-    eternalPeakListeners: 1,
-    composeMedia: null, // { kind: 'image'|'video', dataUrl?, blobUrl?, name, file? }
-    composeMode: null, // null | 'thread' | 'repost'
-    composeParentId: null,
-    screenRecorder: null,
-    screenRecChunks: [],
-  };
-
-  // ---------- DOM ----------
-  const $ = (s) => document.querySelector(s);
-  const $$ = (s) => document.querySelectorAll(s);
-
-  function injectSpirits() {
-    let i = 0;
-    ["splash-spirit", "ob-spirit-2", "ob-spirit-3", "ob-spirit-4", "topbar-spirit", "home-spirit", "profile-spirit"].forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) el.innerHTML = SPIRIT_SVG.replace(/%ID%/g, "s" + (i++));
-    });
-  }
-
-  function showScreen(id) {
-    $$(".screen").forEach((s) => s.classList.remove("active"));
-    const el = document.getElementById(id);
-    if (el) el.classList.add("active");
-  }
-
-  function showView(name) {
-    state.currentView = name;
-    $$(".view").forEach((v) => v.classList.remove("active"));
-    const v = document.getElementById("view-" + name);
-    if (v) v.classList.add("active");
-    $$(".nav-btn").forEach((b) => b.classList.toggle("active", b.dataset.nav === name));
-    // Scroll main content to top on view change
-    const main = document.getElementById("main");
-    if (main) main.scrollTop = 0;
-    // Refresh view-specific UI
-    if (name === "home") renderHome();
-    else if (name === "library") renderLibrary();
-    else if (name === "eternal") renderEternal();
-    else if (name === "live") { renderSoulQueue(); renderLives(); }
-    else if (name === "profile") renderProfile();
-  }
-
-
-  function toast(msg, ms = 2500, type = "info") {
-    const t = $("#toast");
-    if (!t) return;
-    t.textContent = msg;
-    t.setAttribute("role", "status");
-    t.setAttribute("aria-live", "polite");
-    t.classList.remove("hidden", "toast-ok", "toast-err", "toast-info");
-    t.classList.add(type === "ok" ? "toast-ok" : type === "err" ? "toast-err" : "toast-info");
-    clearTimeout(t._t);
-    t._t = setTimeout(() => t.classList.add("hidden"), ms);
-    // light haptic on supported devices
-    try {
-      if (navigator.vibrate && type !== "info") navigator.vibrate(type === "err" ? [40, 30, 40] : 25);
-    } catch (_) {}
-  }
-
-  function fmtTime(s) {
-    s = Math.floor(s) || 0;
-    return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
-  }
-
-  function escapeHtml(str) {
-    const d = document.createElement("div");
-    d.textContent = str;
-    return d.innerHTML;
-  }
-
-  // ---------- Persist helpers ----------
-  function persistAll() {
-    save("onboarded", state.onboarded);
-    save("lang", state.lang);
-    save("profile", state.profile);
-    save("music", state.music);
-    // Persist posts without large video blob URLs (keep image dataURLs + metadata)
-    const postsToSave = state.posts.map((p) => {
-      const copy = { ...p };
-      // Videos live in IndexedDB; strip ephemeral blob URLs only
-      if (copy.mediaKind === "video") delete copy.mediaUrl;
-      return copy;
-    });
-    save("posts", postsToSave);
-    save("xposts", state.xposts);
-    save("tiktok", state.tiktok);
-    save("queue", state.queue);
-    save("eternal", state.eternal);
-    save("lives", state.lives);
-    save("connected", state.connected);
-    save("auth", state.auth);
-    save("privacy", state.privacy);
-    save("moderation", state.moderation);
-    save("downloads", state.downloads);
-    save("notifications", state.notifications);
-    save("autoSync", state.autoSync);
-    save("quietRequests", state.quietRequests);
-    save("apoio", state.apoio);
-    save("captions", state.captions);
-    save("profilesDirectory", state.profilesDirectory);
-    save("draft", state.draft);
-    save("a11y", state.a11y);
-    save("streak", state.streak);
-  }
-
-  // ---------- Item rendering ----------
-  function itemHTML(item, opts = {}) {
-    const flame = item.fav
-      ? `<div class="item-flame"><div class="white-flame"></div></div>`
-      : `<div class="item-flame" style="opacity:.25"><div class="white-flame" style="animation:none;opacity:.4"></div></div>`;
-    let sub = item.type === "music" ? fmtTime(item.duration) : (item.text || item.type);
-    if (item.type === "post") {
-      if (item.mediaKind === "image") sub = "📷 " + (item.text ? item.text.slice(0, 40) : "Imagem");
-      else if (item.mediaKind === "video") sub = "🎬 " + (item.text ? item.text.slice(0, 40) : "Vídeo");
-      else sub = item.text ? item.text.slice(0, 60) : "Texto";
-    }
-    let thumb = "";
-    if (item.type === "post" && item.mediaKind === "image" && item.mediaUrl) {
-      thumb = `<img class="item-thumb" src="${item.mediaUrl}" alt="" />`;
-    } else if (item.type === "post" && item.mediaKind === "video") {
-      thumb = `<div class="item-thumb-placeholder">🎬</div>`;
-    } else if (item.type === "post") {
-      thumb = `<div class="item-thumb-placeholder">✎</div>`;
-    }
-    const viewsLabel = "👁 " + fmtViews(item.views || 0);
-    return `<div class="item" data-id="${item.id}" data-type="${item.type}">
-      ${flame}
-      ${thumb}
-      <div class="item-info">
-        <div class="item-title">${escapeHtml(item.name)}</div>
-        <div class="item-sub">${escapeHtml(sub)} · ${viewsLabel}</div>
-      </div>
-      <div class="item-actions">
-        <button class="btn-small" data-open="${item.id}">⋯</button>
-      </div>
-    </div>`;
-  }
-
-  /** Full post card for the P
+ 
