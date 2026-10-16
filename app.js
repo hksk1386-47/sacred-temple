@@ -2,8 +2,8 @@
 (function () {
   "use strict";
 
-  const APP_VERSION = "13.16.0";
-  const APP_BUILD = "2026-10-15-temple-theme";
+  const APP_VERSION = "13.16.3";
+  const APP_BUILD = "2026-10-16-links-themes-sounds";
 
   // ---------- Config ----------
   // Client ID do Google Cloud Console (OAuth 2.0 → Aplicativo da Web).
@@ -150,6 +150,12 @@
     avatarColor: "#e8e0ff",
     templeTheme: "classic",
     photo: null,
+    // Até 3 links de site / redes sociais
+    links: [
+      { label: "", url: "" },
+      { label: "", url: "" },
+      { label: "", url: "" },
+    ],
   };
 
   /** Temas do templo — vários claros + clássico escuro */
@@ -298,6 +304,96 @@
       },
       themeColor: "#A07830",
     },
+    midnight: {
+      label: "Meia-noite",
+      light: false,
+      vars: {
+        "--purple-deep": "#0D1520",
+        "--purple-mid": "#1A2A40",
+        "--purple-soft": "#2A4060",
+        "--purple-bg": "#080E16",
+        "--gold": "#6AB0E0",
+        "--gold-light": "#9AD0F0",
+        "--gold-dim": "#3A7098",
+        "--white": "#E8F0F8",
+        "--white-dim": "#90A8C0",
+        "--glass": "rgba(255,255,255,0.06)",
+        "--glass-border": "rgba(120,160,200,0.14)",
+      },
+      themeColor: "#6AB0E0",
+    },
+    forest: {
+      label: "Floresta",
+      light: false,
+      vars: {
+        "--purple-deep": "#0F1F18",
+        "--purple-mid": "#1A3A2C",
+        "--purple-soft": "#2A5A44",
+        "--purple-bg": "#0A1410",
+        "--gold": "#6BC48A",
+        "--gold-light": "#9AE0B0",
+        "--gold-dim": "#3A8A58",
+        "--white": "#E8F8EE",
+        "--white-dim": "#90B8A0",
+        "--glass": "rgba(255,255,255,0.06)",
+        "--glass-border": "rgba(100,180,120,0.14)",
+      },
+      themeColor: "#6BC48A",
+    },
+    ocean: {
+      label: "Oceano",
+      light: true,
+      vars: {
+        "--purple-deep": "#1A4A5A",
+        "--purple-mid": "#3A8AA0",
+        "--purple-soft": "#6AB8C8",
+        "--purple-bg": "#E6F6FA",
+        "--gold": "#1A8A9A",
+        "--gold-light": "#3AB0C0",
+        "--gold-dim": "#0A6A78",
+        "--white": "#0E2A32",
+        "--white-dim": "#3A5A62",
+        "--glass": "rgba(255,255,255,0.72)",
+        "--glass-border": "rgba(20,100,120,0.12)",
+      },
+      themeColor: "#1A8A9A",
+    },
+    coral: {
+      label: "Coral",
+      light: true,
+      vars: {
+        "--purple-deep": "#6A3028",
+        "--purple-mid": "#C07060",
+        "--purple-soft": "#E0A090",
+        "--purple-bg": "#FFF2EE",
+        "--gold": "#D05040",
+        "--gold-light": "#E87860",
+        "--gold-dim": "#A03028",
+        "--white": "#3A1814",
+        "--white-dim": "#6A4038",
+        "--glass": "rgba(255,255,255,0.72)",
+        "--glass-border": "rgba(160,60,40,0.12)",
+      },
+      themeColor: "#D05040",
+    },
+    slate: {
+      label: "Ardósia",
+      light: false,
+      vars: {
+        "--purple-deep": "#1A1C22",
+        "--purple-mid": "#2E323C",
+        "--purple-soft": "#4A5060",
+        "--purple-bg": "#12141A",
+        "--gold": "#C0A878",
+        "--gold-light": "#D8C090",
+        "--gold-dim": "#8A7850",
+        "--white": "#F0EEE8",
+        "--white-dim": "#A8A498",
+        "--glass": "rgba(255,255,255,0.07)",
+        "--glass-border": "rgba(180,170,140,0.12)",
+      },
+      themeColor: "#C0A878",
+    },
   };
 
   function applyTempleTheme(themeId, opts) {
@@ -308,6 +404,16 @@
     Object.keys(theme.vars).forEach((k) => {
       root.style.setProperty(k, theme.vars[k]);
     });
+    // Aliases de texto acompanham --white / --white-dim (claro = fonte escura)
+    root.style.setProperty("--text", theme.vars["--white"]);
+    root.style.setProperty("--text-muted", theme.vars["--white-dim"]);
+    if (theme.light) {
+      root.style.setProperty("--surface-soft", "rgba(40,30,60,0.06)");
+      root.style.setProperty("--surface-hover", "rgba(40,30,60,0.1)");
+    } else {
+      root.style.setProperty("--surface-soft", "rgba(255,255,255,0.06)");
+      root.style.setProperty("--surface-hover", "rgba(255,255,255,0.12)");
+    }
     root.classList.toggle("temple-light", !!theme.light);
     root.dataset.templeTheme = id;
     // Barra do navegador / PWA
@@ -319,75 +425,4 @@
         metas.forEach((m) => m.setAttribute("content", theme.themeColor || theme.vars["--gold"]));
       } catch (_) {}
     }
-    return id;
-  }
-
-  const BAD_WORDS = { soft: ["spam"], medium: ["spam", "hate", "idiot"], strict: ["spam", "hate", "idiot", "stupid", "kill"] };
-
-  // ---------- State ----------
-  function load(key, def) {
-    try { const v = localStorage.getItem("st_" + key); return v ? JSON.parse(v) : def; } catch { return def; }
-  }
-  function save(key, val) { localStorage.setItem("st_" + key, JSON.stringify(val)); }
-
-  const POST_REACTIONS = [
-    { key: "revived", emoji: "👻", title: "Estou revigorado" },
-    { key: "light", emoji: "✨", title: "Quanta luz" },
-    { key: "remember", emoji: "🤩", title: "Lembro quem sou eu" },
-    { key: "flame", emoji: "🔥", title: "Nunca deixarei o impostor me derrotar" },
-    { key: "soul", emoji: "🥺", title: "A alma sofre a inconsciência do corpo no qual está" },
-  ];
-
-  const state = {
-    onboarded: load("onboarded", false),
-    lang: load("lang", null),
-    profile: load("profile", DEFAULT_PROFILE),
-    music: load("music", []),
-    posts: load("posts", []),
-    xposts: load("xposts", []),
-    tiktok: load("tiktok", []),
-    queue: load("queue", []),       // soul queue
-    eternal: load("eternal", []),   // eternal station queue
-    lives: load("lives", []),
-    connected: load("connected", { x: false, tiktok: false, suno: false, google: false }),
-    auth: load("auth", null), // { provider, email, name, picture, sub }
-    privacy: load("privacy", { profile: "public", eternal: "public", lives: "public", comment: "everyone", quiet: "everyone", download: "allow" }),
-    moderation: load("moderation", { level: "medium", words: "", action: "censor", spam: "on" }),
-    downloads: load("downloads", { music: "yes", lives: "yes", viewers: "yes" }),
-    notifications: (() => {
-      const n = load("notifications", { posts: "on", eternal: "off", lives: "on", temples: "on", permissionAsked: false });
-      if (n.temples == null) n.temples = "on";
-      return n;
-    })(),
-    autoSync: load("autoSync", true), // sincronizar com API automaticamente após postar/importar
-    quietRequests: load("quietRequests", []),
-    apoio: load("apoio", { apoiadores: [], apoiando: [] }), // demo lists of { id, name }
-    captions: load("captions", {}), // itemId -> { lang: text }
-    translations: load("translations", {}), // itemId -> { lang: translated }
-    // Diretório local de perfis conhecidos neste dispositivo
-    profilesDirectory: load("profilesDirectory", []), // [{ id, name, bio, handle, color, photo, source, updatedAt }]
-    // IDs de templos já vistos (para avisar quando surgir um novo)
-    knownTempleIds: load("knownTempleIds", []),
-    draft: load("draft", null), // { text, link, savedAt }
-    a11y: (() => {
-      const a = load("a11y", { font: "normal", motion: "off", contrast: "off", tts: "on", ttsRate: "1", ttsLang: null });
-      if (a.tts == null) a.tts = "on";
-      if (a.ttsRate == null) a.ttsRate = "1";
-      return a;
-    })(),
-    streak: load("streak", { count: 0, lastDate: null }),
-    libraryFilterPinned: false,
-    libraryQuery: "",
-    sleepTimerId: null,
-    sleepEndsAt: null,
-    _undoItem: null,
-    _undoTimer: null,
-    liveStart: null,
-    livePeakPresence: 1,
-    currentView: "home",
-    isPlaying: false,
-    eternalIndex: 0,
-    progress: 0,
-    duration: 0,
-    cameraStream: null,
- 
+    r
