@@ -11,8 +11,10 @@ function corsHeaders(request) {
   return {
     "Access-Control-Allow-Origin": allow,
     "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Profile-Id, X-Device-Id, X-Media-Id, X-Media-Name, X-Media-Kind, X-Duration",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Profile-Id, X-Device-Id, X-Media-Id, X-Media-Name, X-Media-Kind, X-Duration, Range",
+    "Access-Control-Expose-Headers": "Content-Range, Accept-Ranges, Content-Length",
     "Access-Control-Max-Age": "86400",
+    "X-Content-Type-Options": "nosniff",
   };
 }
 
@@ -53,6 +55,108 @@ async function readJson(request) {
   }
 }
 
+/* ---------- Web Push (VAPID, sem payload criptografado — “tick” + título no SW) ---------- */
+function b64urlToBytes(s) {
+  const pad = "=".repeat((4 - (s.length % 4)) % 4);
+  const b64 = (s + pad).replace(/-/g, "+").replace(/_/g, "/");
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+function bytesToB64url(bytes) {
+  let s = "";
+  for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function textToB64url(text) {
+  return bytesToB64url(new TextEncoder().encode(text));
+}
+
+async function importVapidKeyPair(publicB64, privateB64) {
+  const pub = b64urlToBytes(publicB64);
+  // uncompressed 0x04 || x(32) || y(32)
+  if (pub.length !== 65 || pub[0] !== 4) throw new Error("VAPID public key inválida");
+  const x = bytesToB64url(pub.slice(1, 33));
+  const y = bytesToB64url(pub.slice(33, 65));
+  const d = privateB64;
+  const priv = await crypto.subtle.importKey(
+    "jwk",
+    { kty: "EC", crv: "P-256", x, y, d, ext: true, key_ops: ["sign"] },
+    { name: "ECDSA", namedCurve: "P-256" },
+    false,
+    ["sign"]
+  );
+  return { priv, publicB64 };
+}
+
+async function createVapidAuthHeader(endpoint, publicB64, privateB64, subject) {
+  const { priv } = await importVapidKeyPair(publicB64, privateB64);
+  const aud = new URL(endpoint).origin;
+  const exp = Math.floor(Date.now() / 1000) + 12 * 60 * 60;
+  const header = textToB64url(JSON.stringify({ typ: "JWT", alg: "ES256" }));
+  const payload = textToB64url(JSON.stringify({ aud, exp, sub: subject || "mailto:sacred-temple@workers.dev" }));
+  const data = new TextEncoder().encode(header + "." + payload);
+  const sig = await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, priv, data);
+  // Convert DER-ish raw r||s (64 bytes from WebCrypto) to b64url
+  const sigB64 = bytesToB64url(new Uint8Array(sig));
+  const jwt = header + "." + payload + "." + sigB64;
+  return "vapid t=" + jwt + ", k=" + publicB64;
+}
+
+async function sendPushToEndpoint(env, endpoint, payloadObj) {
+  const pub = env.VAPID_PUBLIC_KEY;
+  const priv = env.VAPID_PRIVATE_KEY;
+  if (!pub || !priv) return { ok: false, error: "VAPID não configurado" };
+  const auth = await createVapidAuthHeader(endpoint, pub, priv, env.VAPID_SUBJECT);
+  // Envia corpo JSON em texto: alguns serviços exigem cifrar; para FCM/Mozilla
+  // usamos push sem body (tick) — o SW mostra título padrão ou busca na rede.
+  // Com body não cifrado muitos endpoints rejeitam; por isso body vazio + headers.
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      TTL: "86400",
+      Urgency: "normal",
+      Authorization: auth,
+      "Content-Length": "0",
+    },
+  });
+  return { ok: res.ok || res.status === 201, status: res.status };
+}
+
+async function notifyFollowersOfPost(env, authorId, postText) {
+  if (!env.VAPID_PUBLIC_KEY || !env.VAPID_PRIVATE_KEY) return;
+  try {
+    // Seguidores (apoio.from_id → author) + outros aparelhos do autor
+    const { results: subs } = await env.DB.prepare(
+      `SELECT DISTINCT endpoint FROM push_subscriptions
+       WHERE profile_id = ?
+          OR profile_id IN (SELECT from_id FROM apoio WHERE to_id = ?)`
+    )
+      .bind(authorId, authorId)
+      .all();
+    const list = subs || [];
+    for (const row of list) {
+      try {
+        const r = await sendPushToEndpoint(env, row.endpoint, {
+          title: "Sacred Temple",
+          body: (postText || "Novo post no templo").slice(0, 120),
+        });
+        // 404/410 → inscrição morta
+        if (r.status === 404 || r.status === 410) {
+          await env.DB.prepare("DELETE FROM push_subscriptions WHERE endpoint = ?").bind(row.endpoint).run();
+        }
+      } catch (e) {
+        console.warn("push send", e);
+      }
+    }
+  } catch (e) {
+    console.warn("notifyFollowers", e);
+  }
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === "OPTIONS") {
@@ -74,7 +178,14 @@ export default {
     try {
       // Health
       if (path === "/" || path === "/api" || path === "/api/health") {
-        return json({ ok: true, app: env.APP_NAME || "Sacred Temple", time: now() }, 200, request);
+        return json({
+          ok: true,
+          app: env.APP_NAME || "Sacred Temple",
+          version: "1.1.1",
+          time: now(),
+          d1: !!env.DB,
+          r2: !!env.MEDIA,
+        }, 200, request);
       }
 
       // POST /api/profiles — criar ou atualizar perfil
@@ -215,6 +326,11 @@ export default {
           )
           .run();
         const row = await env.DB.prepare("SELECT * FROM posts WHERE id = ?").bind(id).first();
+        // Web Push para seguidores e outros aparelhos do autor (não bloqueia a resposta)
+        try {
+          const preview = String(body.text || "Novo post").slice(0, 120);
+          notifyFollowersOfPost(env, body.author_id, preview);
+        } catch (_) {}
         return json({ ok: true, post: row }, 201, request);
       }
 
@@ -329,7 +445,7 @@ export default {
         return json({ ok: true, id, url: publicUrl, size, mime }, 200, request);
       }
 
-      // GET /api/media/:id
+      // GET /api/media/:id  (suporta Range para seek em áudio/vídeo — grátis)
       if (path.startsWith("/api/media/") && method === "GET") {
         const id = decodeURIComponent(path.slice("/api/media/".length));
         if (!id || id.includes("/")) return err("id inválido", 400, request);
@@ -339,49 +455,42 @@ export default {
         if (!row) return err("mídia não encontrada", 404, request);
 
         const key = "media/" + row.profile_id + "/" + id;
+        const size = Number(row.size) || 0;
+        const rangeHeader = request.headers.get("Range");
+
+        // Pedido parcial (seek) — essencial para players mobile
+        if (rangeHeader && size > 0) {
+          const m = /^bytes=(\d*)-(\d*)$/i.exec(rangeHeader.trim());
+          if (m) {
+            let start = m[1] === "" ? 0 : parseInt(m[1], 10);
+            let end = m[2] === "" ? size - 1 : parseInt(m[2], 10);
+            if (Number.isNaN(start) || Number.isNaN(end) || start > end || start >= size) {
+              return new Response(null, {
+                status: 416,
+                headers: {
+                  ...corsHeaders(request),
+                  "Content-Range": "bytes */" + size,
+                },
+              });
+            }
+            end = Math.min(end, size - 1);
+            const obj = await env.MEDIA.get(key, { range: { offset: start, length: end - start + 1 } });
+            if (!obj) return err("arquivo não encontrado no storage", 404, request);
+            const headers = {
+              ...corsHeaders(request),
+              "Content-Type": row.mime || "application/octet-stream",
+              "Content-Length": String(end - start + 1),
+              "Content-Range": "bytes " + start + "-" + end + "/" + size,
+              "Accept-Ranges": "bytes",
+              "Cache-Control": "public, max-age=86400",
+              "Content-Disposition": 'inline; filename="' + (row.name || id).replace(/"/g, "") + '"',
+            };
+            return new Response(obj.body, { status: 206, headers });
+          }
+        }
+
         const obj = await env.MEDIA.get(key);
         if (!obj) return err("arquivo não encontrado no storage", 404, request);
 
         const headers = {
-          ...corsHeaders(request),
-          "Content-Type": row.mime || "application/octet-stream",
-          "Content-Length": String(row.size || ""),
-          "Accept-Ranges": "bytes",
-          "Cache-Control": "public, max-age=86400",
-          "Content-Disposition": 'inline; filename="' + (row.name || id).replace(/"/g, "") + '"',
-        };
-        return new Response(obj.body, { status: 200, headers });
-      }
-
-      // GET /api/music?author=handleOrId
-      if (path === "/api/music" && method === "GET") {
-        const author = url.searchParams.get("author") || "";
-        if (!author) return err("author obrigatório", 400, request);
-        const profile =
-          (await env.DB.prepare("SELECT * FROM profiles WHERE handle = ? OR id = ?").bind(author, author).first()) ||
-          null;
-        if (!profile) return json({ ok: true, music: [] }, 200, request);
-        const { results } = await env.DB.prepare(
-          "SELECT id, name, mime, size, kind, duration, created_at FROM media WHERE profile_id = ? AND kind = 'music' ORDER BY created_at DESC LIMIT 50"
-        )
-          .bind(profile.id)
-          .all();
-        const origin = new URL(request.url).origin;
-        const music = (results || []).map((m) => ({
-          id: m.id,
-          n: m.name,
-          d: m.duration || 0,
-          mime: m.mime,
-          size: m.size,
-          url: origin + "/api/media/" + encodeURIComponent(m.id),
-        }));
-        return json({ ok: true, music }, 200, request);
-      }
-
-      return err("rota não encontrada", 404, request);
-    } catch (e) {
-      console.error(e);
-      return err(String(e.message || e), 500, request);
-    }
-  },
-};
+         
