@@ -1,0 +1,21 @@
+Web Push — configurar no Cloudflare Worker (sacred-temple-api)
+
+1) Settings → Variables and Secrets
+
+   Variable (plain):
+   VAPID_PUBLIC_KEY = BDeb9CNdEW3N_7IOJTBwLlBtKZIKPrTbxsAKEAu6S-yWILCNQQVCSAzmtoLDwOqcPs3nZ_bC_lAw9vTaltwiOH8
+   VAPID_SUBJECT    = mailto:seu-email@exemplo.com
+
+   Secret (Encrypt):
+   VAPID_PRIVATE_KEY = s1hf9pm_ytGZLu75BD7u47gvzBrTvgC4W6knEBDW4Zk
+
+2) D1 Console — rode o SQL de migrations/0003_push.sql
+   (tabela push_subscriptions)
+
+3) Redeploy do Worker após salvar secrets
+
+4) No app: Perfil → Notificações → Pedir permissão
+   (inscreve este aparelho no Push)
+
+Quando alguém que você apoia publicar (ou você em outro aparelho),
+o servidor envia um “tick” push e o Service Worker mostra a notificação.
