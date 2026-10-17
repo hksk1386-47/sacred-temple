@@ -2,8 +2,8 @@
 (function () {
   "use strict";
 
-  const APP_VERSION = "13.16.3";
-  const APP_BUILD = "2026-10-16-links-themes-sounds";
+  const APP_VERSION = "13.16.4";
+  const APP_BUILD = "2026-10-16-social-link-logos";
 
   // ---------- Config ----------
   // Client ID do Google Cloud Console (OAuth 2.0 → Aplicativo da Web).
@@ -425,4 +425,4 @@
         metas.forEach((m) => m.setAttribute("content", theme.themeColor || theme.vars["--gold"]));
       } catch (_) {}
     }
-    r
+    ret
