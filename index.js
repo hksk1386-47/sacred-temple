@@ -181,7 +181,7 @@ export default {
         return json({
           ok: true,
           app: env.APP_NAME || "Sacred Temple",
-          version: "1.1.1",
+          version: "1.2.0",
           time: now(),
           d1: !!env.DB,
           r2: !!env.MEDIA,
@@ -311,7 +311,7 @@ export default {
              media_kind = excluded.media_kind,
              media_url = excluded.media_url,
              pinned = excluded.pinned,
-             views = excluded.views`
+             views = MAX(posts.views, excluded.views)`
         )
           .bind(
             id,
@@ -364,11 +364,54 @@ export default {
         return json({ ok: true, posts: rows.results || [] }, 200, request);
       }
 
-      // POST /api/posts/:id/view
+      // POST /api/posts/:id/view  — incrementa e devolve o total atualizado
       if (path.match(/^\/api\/posts\/[^/]+\/view$/) && method === "POST") {
         const id = path.split("/")[3];
         await env.DB.prepare("UPDATE posts SET views = views + 1 WHERE id = ?").bind(id).run();
-        return json({ ok: true }, 200, request);
+        const row = await env.DB.prepare("SELECT id, views FROM posts WHERE id = ?").bind(id).first();
+        return json({ ok: true, id, views: row ? row.views : 0 }, 200, request);
+      }
+
+      // GET /api/posts/:id/views  — consulta visualizações em tempo real
+      if (path.match(/^\/api\/posts\/[^/]+\/views$/) && method === "GET") {
+        const id = path.split("/")[3];
+        const row = await env.DB.prepare("SELECT id, views FROM posts WHERE id = ?").bind(id).first();
+        if (!row) return err("post não encontrado", 404, request);
+        return json({ ok: true, id: row.id, views: row.views || 0 }, 200, request);
+      }
+
+      // POST /api/profiles/recover  — entrar no próprio perfil sem Google (handle + pin opcional)
+      if (path === "/api/profiles/recover" && method === "POST") {
+        const body = await readJson(request);
+        const handle = String(body?.handle || "").toLowerCase().replace(/^@/, "").trim();
+        if (!handle) return err("handle obrigatório", 400, request);
+        const row = await env.DB.prepare("SELECT * FROM profiles WHERE handle = ?").bind(handle).first();
+        if (!row) return err("perfil não encontrado", 404, request);
+        // PIN opcional: se o perfil tiver recovery_pin, exige coincidir
+        if (row.recovery_pin) {
+          const pin = String(body?.pin || "").trim();
+          if (pin !== String(row.recovery_pin)) return err("PIN incorreto", 403, request);
+        }
+        const posts = await env.DB.prepare(
+          "SELECT * FROM posts WHERE author_id = ? ORDER BY pinned DESC, created_at DESC LIMIT 100"
+        ).bind(row.id).all();
+        return json({
+          ok: true,
+          profile: row,
+          posts: posts.results || [],
+        }, 200, request);
+      }
+
+      // POST /api/profiles/:id/pin  — definir PIN de recuperação (gratuito, local no D1)
+      if (path.match(/^\/api\/profiles\/[^/]+\/pin$/) && method === "POST") {
+        const id = path.split("/")[3];
+        const body = await readJson(request);
+        const pin = String(body?.pin || "").trim();
+        if (pin && !/^\d{4,8}$/.test(pin)) return err("PIN deve ter 4 a 8 dígitos", 400, request);
+        await env.DB.prepare("UPDATE profiles SET recovery_pin = ?, updated_at = ? WHERE id = ?")
+          .bind(pin || null, now(), id)
+          .run();
+        return json({ ok: true, has_pin: !!pin }, 200, request);
       }
 
       // POST /api/apoio  { from_id, to_id }
@@ -442,55 +485,4 @@ export default {
 
         const url = new URL(request.url);
         const publicUrl = url.origin + "/api/media/" + encodeURIComponent(id);
-        return json({ ok: true, id, url: publicUrl, size, mime }, 200, request);
-      }
-
-      // GET /api/media/:id  (suporta Range para seek em áudio/vídeo — grátis)
-      if (path.startsWith("/api/media/") && method === "GET") {
-        const id = decodeURIComponent(path.slice("/api/media/".length));
-        if (!id || id.includes("/")) return err("id inválido", 400, request);
-        if (!env.MEDIA) return err("R2 não configurado", 503, request);
-
-        const row = await env.DB.prepare("SELECT * FROM media WHERE id = ?").bind(id).first();
-        if (!row) return err("mídia não encontrada", 404, request);
-
-        const key = "media/" + row.profile_id + "/" + id;
-        const size = Number(row.size) || 0;
-        const rangeHeader = request.headers.get("Range");
-
-        // Pedido parcial (seek) — essencial para players mobile
-        if (rangeHeader && size > 0) {
-          const m = /^bytes=(\d*)-(\d*)$/i.exec(rangeHeader.trim());
-          if (m) {
-            let start = m[1] === "" ? 0 : parseInt(m[1], 10);
-            let end = m[2] === "" ? size - 1 : parseInt(m[2], 10);
-            if (Number.isNaN(start) || Number.isNaN(end) || start > end || start >= size) {
-              return new Response(null, {
-                status: 416,
-                headers: {
-                  ...corsHeaders(request),
-                  "Content-Range": "bytes */" + size,
-                },
-              });
-            }
-            end = Math.min(end, size - 1);
-            const obj = await env.MEDIA.get(key, { range: { offset: start, length: end - start + 1 } });
-            if (!obj) return err("arquivo não encontrado no storage", 404, request);
-            const headers = {
-              ...corsHeaders(request),
-              "Content-Type": row.mime || "application/octet-stream",
-              "Content-Length": String(end - start + 1),
-              "Content-Range": "bytes " + start + "-" + end + "/" + size,
-              "Accept-Ranges": "bytes",
-              "Cache-Control": "public, max-age=86400",
-              "Content-Disposition": 'inline; filename="' + (row.name || id).replace(/"/g, "") + '"',
-            };
-            return new Response(obj.body, { status: 206, headers });
-          }
-        }
-
-        const obj = await env.MEDIA.get(key);
-        if (!obj) return err("arquivo não encontrado no storage", 404, request);
-
-        const headers = {
-         
+        ret
