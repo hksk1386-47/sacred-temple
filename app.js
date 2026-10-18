@@ -2,7 +2,7 @@
 (function () {
   "use strict";
 
-  const APP_VERSION = "13.16.4";
+  const APP_VERSION = "13.16.5";
   const APP_BUILD = "2026-10-16-social-link-logos";
 
   // ---------- Config ----------
