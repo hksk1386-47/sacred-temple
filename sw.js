@@ -1,5 +1,5 @@
-/* Sacred Temple — Service Worker (offline + notifications) v13.16.4 */
-const CACHE = "sacred-temple-v13.16.4";
+/* Sacred Temple — Service Worker (offline + notifications) v13.16.5 */
+const CACHE = "sacred-temple-v13.16.5";
 const ASSETS = [
   "./",
   "./index.html",
@@ -178,4 +178,4 @@ self.addEventListener("fetch", (event) => {
     })
   );
 });
-        
+  
