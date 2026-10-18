@@ -160,6 +160,35 @@
     });
   }
 
+  /** Incrementa visualização de um post no servidor e devolve o total */
+  async function viewPost(postId) {
+    return request("/api/posts/" + encodeURIComponent(postId) + "/view", {
+      method: "POST",
+      body: "{}",
+    });
+  }
+
+  /** Consulta visualizações em tempo real */
+  async function getPostViews(postId) {
+    return request("/api/posts/" + encodeURIComponent(postId) + "/views");
+  }
+
+  /** Recuperar perfil sem Google (handle + PIN opcional) */
+  async function recoverProfile(handle, pin) {
+    return request("/api/profiles/recover", {
+      method: "POST",
+      body: JSON.stringify({ handle, pin: pin || "" }),
+    });
+  }
+
+  /** Definir ou remover PIN de recuperação */
+  async function setRecoveryPin(profileId, pin) {
+    return request("/api/profiles/" + encodeURIComponent(profileId) + "/pin", {
+      method: "POST",
+      body: JSON.stringify({ pin: pin || "" }),
+    });
+  }
+
   global.SacredAPI = {
     getBase,
     setBase,
@@ -178,6 +207,10 @@
     pushSubscribe,
     pushUnsubscribe,
     pushTest,
+    viewPost,
+    getPostViews,
+    recoverProfile,
+    setRecoveryPin,
   };
 })(typeof window !== "undefined" ? window : globalThis);
-      
+                            
