@@ -23,3 +23,7 @@ compatibility_date = "2024-12-01"
 
 [vars]
 APP_NAME = "Sacred Temple"
+
+# Web Push (chave privada em Secret: VAPID_PRIVATE_KEY)
+VAPID_PUBLIC_KEY = "BDeb9CNdEW3N_7IOJTBwLlBtKZIKPrTbxsAKEAu6S-yWILCNQQVCSAzmtoLDwOqcPs3nZ_bC_lAw9vTaltwiOH8"
+VAPID_SUBJECT = "mailto:sacred-temple@workers.dev"
