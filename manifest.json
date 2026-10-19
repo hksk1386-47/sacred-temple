@@ -2,13 +2,13 @@
   "id": "/sacred-temple/",
   "name": "Sacred Temple",
   "short_name": "Sacred Temple",
-  "description": "A place to share what the soul is saying — templo pessoal, posts, músicas e Eternal Station. Grátis · PWA v13.15",
+  "description": "A place to share what the soul is saying — templo pessoal, posts, músicas e Eternal Station. Grátis · PWA v13.16.8",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],
   "background_color": "#1a0f2e",
-  "theme_color": "#2E1A47",
+  "theme_color": "#C9A227",
   "orientation": "portrait-primary",
   "icons": [
     {
