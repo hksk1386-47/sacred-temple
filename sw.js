@@ -1,5 +1,6 @@
-/* Sacred Temple — Service Worker (offline + notifications) v13.16.5 */
-const CACHE = "sacred-temple-v13.16.5";
+/* Sacred Temple — Service Worker (offline + notifications) v13.16.7 */
+const CACHE = "sacred-temple-v13.16.7";
+const IMPORT_CACHE = "sacred-temple-import-active";
 const ASSETS = [
   "./",
   "./index.html",
@@ -46,7 +47,11 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
+      Promise.all(
+        keys
+          .filter((k) => k !== CACHE && k !== IMPORT_CACHE && !k.startsWith("sacred-temple-v-import-"))
+          .map((k) => caches.delete(k))
+      )
     ).then(() => self.clients.claim())
   );
 });
@@ -111,71 +116,109 @@ self.addEventListener("notificationclick", (event) => {
   );
 });
 
+/** Busca primeiro no cache de importação, depois no cache principal */
+async function matchLocal(req) {
+  const fromImport = await caches.match(req, { cacheName: IMPORT_CACHE });
+  if (fromImport) return fromImport;
+  const fromMain = await caches.match(req, { cacheName: CACHE });
+  if (fromMain) return fromMain;
+  return caches.match(req);
+}
+
+function isSameOrigin(url) {
+  return url.origin === self.location.origin;
+}
+
+function isRemoteApi(url) {
+  // Só força rede para APIs/mídia em OUTRO host (não o próprio app em workers.dev)
+  if (!isSameOrigin(url) && (url.hostname.includes("workers.dev") || url.pathname.includes("/api/"))) {
+    return true;
+  }
+  if (isSameOrigin(url) && url.pathname.startsWith("/api/")) return true;
+  if (url.pathname.includes("/api/media/")) return true;
+  return false;
+}
+
+function isCoreAsset(url) {
+  const p = url.pathname;
+  return (
+    /\/js\/(api|app)\.js$/.test(p) ||
+    /\/css\/styles\.css$/.test(p) ||
+    /\/index\.html$/.test(p) ||
+    p.endsWith("/") ||
+    /\/sw\.js$/.test(p) ||
+    /\/manifest\.json$/.test(p)
+  );
+}
+
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
 
   const url = new URL(req.url);
 
-  // API e mídia remota: sempre rede (não cachear áudio/vídeo grande)
-  if (
-    url.pathname.startsWith("/api/") ||
-    url.hostname.includes("workers.dev") ||
-    url.pathname.includes("/api/media/")
-  ) {
-    event.respondWith(
-      fetch(req).catch(() => caches.match(req))
-    );
+  // API / mídia remota (outro host ou /api no mesmo host): sempre rede
+  if (isRemoteApi(url)) {
+    event.respondWith(fetch(req).catch(() => matchLocal(req)));
     return;
   }
 
-  // Scripts do app: rede primeiro — atualiza sem clicar em Atualizar
-  if (/\/js\/(api|app)\.js$/.test(url.pathname)) {
+  // Assets do app (incluindo quando hospedado em *.workers.dev):
+  // 1) cache de importação  2) cache principal  3) rede
+  // Assim a "Importar atualização" funciona de verdade.
+  if (isSameOrigin(url) && (isCoreAsset(url) || req.mode === "navigate")) {
     event.respondWith(
-      fetch(req)
-        .then((res) => {
+      (async () => {
+        const cached = await matchLocal(req);
+        if (cached) {
+          // Atualiza em segundo plano se houver rede (stale-while-revalidate)
+          // MAS não sobrescreve se a resposta em cache veio de importação
+          const wasImport = cached.headers && cached.headers.get("X-Sacred-Import") === "1";
+          if (!wasImport) {
+            fetch(req)
+              .then((res) => {
+                if (res && res.ok) {
+                  const copy = res.clone();
+                  caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+                }
+              })
+              .catch(() => {});
+          }
+          return cached;
+        }
+        try {
+          const res = await fetch(req);
           if (res && res.ok) {
             const copy = res.clone();
-            caches.open(CACHE).then((cache) => cache.put(req, copy)).catch(() => {});
+            caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
           }
           return res;
-        })
-        .catch(() => caches.match(req))
+        } catch (_) {
+          if (req.mode === "navigate") {
+            return new Response(OFFLINE_HTML, {
+              status: 503,
+              headers: { "Content-Type": "text/html; charset=utf-8" },
+            });
+          }
+          throw _;
+        }
+      })()
     );
     return;
   }
 
-  if (req.mode === "navigate" || (req.headers.get("accept") || "").includes("text/html")) {
-    event.respondWith(
-      fetch(req)
-        .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((cache) => cache.put(req, copy)).catch(() => {});
-          return res;
-        })
-        .catch(async () => {
-          const cached = (await caches.match("./index.html")) || (await caches.match(req));
-          if (cached) return cached;
-          return new Response(OFFLINE_HTML, {
-            status: 503,
-            headers: { "Content-Type": "text/html; charset=utf-8" },
-          });
-        })
-    );
-    return;
-  }
-
+  // Demais assets same-origin: cache first
   event.respondWith(
-    caches.match(req).then((cached) => {
+    matchLocal(req).then((cached) => {
       if (cached) return cached;
       return fetch(req).then((res) => {
-        if (res && res.ok && url.origin === self.location.origin) {
+        if (res && res.ok && isSameOrigin(url)) {
           const clone = res.clone();
           caches.open(CACHE).then((cache) => cache.put(req, clone));
         }
         return res;
-      }).catch(() => cached);
+      });
     })
   );
 });
-  
+    
