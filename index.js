@@ -271,7 +271,7 @@ export default {
           .all();
 
         const posts = await env.DB.prepare(
-          "SELECT * FROM posts WHERE author_id = ? ORDER BY pinned DESC, created_at DESC LIMIT 50"
+          "SELECT * FROM posts WHERE author_id = ? ORDER BY pinned DESC, created_at DESC LIMIT 100"
         )
           .bind(row.id)
           .all();
@@ -341,7 +341,7 @@ export default {
         let rows;
         if (author) {
           rows = await env.DB.prepare(
-            "SELECT posts.*, profiles.handle, profiles.name as author_name FROM posts JOIN profiles ON profiles.id = posts.author_id WHERE posts.author_id = ? OR profiles.handle = ? ORDER BY pinned DESC, created_at DESC LIMIT 50"
+            "SELECT posts.*, profiles.handle, profiles.name as author_name FROM posts JOIN profiles ON profiles.id = posts.author_id WHERE posts.author_id = ? OR profiles.handle = ? ORDER BY pinned DESC, created_at DESC LIMIT 100"
           )
             .bind(author, author.toLowerCase())
             .all();
@@ -350,7 +350,7 @@ export default {
           rows = await env.DB.prepare(
             `SELECT posts.*, profiles.handle, profiles.name as author_name FROM posts
              JOIN profiles ON profiles.id = posts.author_id
-             WHERE lower(posts.text) LIKE ? ORDER BY created_at DESC LIMIT 50`
+             WHERE lower(posts.text) LIKE ? ORDER BY created_at DESC LIMIT 100`
           )
             .bind(like)
             .all();
@@ -358,7 +358,7 @@ export default {
           rows = await env.DB.prepare(
             `SELECT posts.*, profiles.handle, profiles.name as author_name FROM posts
              JOIN profiles ON profiles.id = posts.author_id
-             ORDER BY created_at DESC LIMIT 50`
+             ORDER BY created_at DESC LIMIT 100`
           ).all();
         }
         return json({ ok: true, posts: rows.results || [] }, 200, request);
@@ -485,4 +485,4 @@ export default {
 
         const url = new URL(request.url);
         const publicUrl = url.origin + "/api/media/" + encodeURIComponent(id);
-        ret
+       
